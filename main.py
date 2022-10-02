@@ -6,6 +6,7 @@ import os
 pg.init()
 
 clock = pg.time.Clock()
+game_started = True
 fps = 30
 control = 3
 cooldown = 5
@@ -23,7 +24,7 @@ screen = pg.display.set_mode((screen_width, screen_height))
 pg.display.set_caption("Snake")
 
 tile_size = 50
-snake = [[7,4]]
+snake = [[7, 11]]
 map = []
 map_row = []
 for i in range(24):
@@ -36,12 +37,18 @@ map[snake[0][0]][snake[0][1]] = 2
 
 yellow = (255, 255, 0)
 score_font = pg.font.Font("Turok.ttf", 30)
+pause_font = pg.font.Font("Turok.ttf", 80)
 
 
 def draw_text(text, font, text_col, x, y):
     img = font.render(text, True, text_col)
     screen.blit(img, (x, y))
 
+
+def draw_rotated_text(text, font, text_col, x, y, rotation):
+    img = font.render(text, True, text_col)
+    img = pg.transform.rotate(img, rotation)
+    screen.blit(img, (x, y))
 
 
 class World():
@@ -93,19 +100,68 @@ class World():
             screen.blit(tile[0], tile[1])
 
 
-def pause():
+def pause(run):
     game_paused = True
+    draw_text("GAME PAUSED", pause_font, yellow, 370, 300)
+    pg.display.update()
     while game_paused:
         for event in pg.event.get():
+            if event.type == pg.QUIT:
+                run = False
+                game_paused = False
             if event.type == pg.KEYDOWN:
                 if event.key == pg.K_p:
                     game_paused = False
                 if event.type == pg.QUIT:
                     pg.quit()
+    return run
+
+
+def restart(run):
+    game_lost = True
+    draw_text("YOU LOST!", pause_font, yellow, 430, 250)
+    draw_text("press r to restart", pause_font, yellow, 270, 400)
+    pg.display.update()
+    while game_lost:
+        for event in pg.event.get():
+            if event.type == pg.QUIT:
+                run = False
+                game_lost = False
+            if event.type == pg.KEYDOWN:
+                if event.key == pg.K_r:
+                    game_lost = False
+    return run
+
+
+def start(control, run):
+    game_lost = True
+    draw_text("< arrow left", score_font, yellow, 350, 350)
+    draw_text("arrow right >", score_font, yellow, 630, 350)
+    draw_rotated_text("arrow up >", score_font, yellow, 550, 195, 90)
+    draw_rotated_text("arrow down >", score_font, yellow, 560, 420, 270)
+    pg.display.update()
+    while game_lost:
+        for event in pg.event.get():
+            if event.type == pg.QUIT:
+                run = False
+                game_lost = False
+            if event.type == pg.KEYDOWN:
+                if event.key == pg.K_LEFT:
+                    control = 4
+                    game_lost = False
+                if event.key == pg.K_RIGHT:
+                    control = 3
+                    game_lost = False
+                if event.key == pg.K_UP:
+                    control = 2
+                    game_lost = False
+                if event.key == pg.K_DOWN:
+                    control = 1
+                    game_lost = False
+    return control, run
 
 
 def obstacles(map):
-
     for i in map:
         n = random.randint(0, 23)
         map[map.index(i)][n] = 4
@@ -142,15 +198,16 @@ while run:
     draw_text("score " + str(score), score_font, yellow, 20, 20)
     draw_text("highscore " + str(highscore), score_font, yellow, 20, 50)
 
-
+    if game_started:
+        control, run = start(control, run)
+        game_started = False
 
     for event in pg.event.get():
         if event.type == pg.QUIT:
             run = False
         if event.type == pg.KEYDOWN:
             if event.key == pg.K_p:
-                pause()
-
+                run = pause(run)
 
 
     key = pg.key.get_pressed()
@@ -204,6 +261,9 @@ while run:
 
         eating = False
         if map[snake[-1][0]][snake[-1][1]] == 2 or map[snake[-1][0]][snake[-1][1]] == 4:
+            pg.display.update()
+            run = restart(run)
+            game_started = True
             map = []
             map_row = []
             for i in range(24):
@@ -211,7 +271,7 @@ while run:
             for i in range(16):
                 map.append(map_row[:])
             map = obstacles(map)
-            snake = [[7, 4], [7, 5]]
+            snake = [[7, 12], [7, 11]]
             if score == highscore:
                 pickle.dump(highscore, open("highscore.dat", "wb"))
             score = 0
@@ -225,7 +285,6 @@ while run:
             map[snake[0][0]][snake[0][1]] = 1
             snake.pop(0)
         cooldown = 5
-
 
 
     pg.display.update()
